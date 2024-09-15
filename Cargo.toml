@@ -1,0 +1,14 @@
+[package]
+name = "mjpg-streamer"
+version = "0.9.0"
+edition = "2021"
+authors = ["dchansen06"]
+description = "A jpg streamer that supports snapshots and streams, designed with octoprint in mind"
+keywords = ["octoprint", "mjpg", "jpg", "stream", "camera"]
+
+[dependencies]
+clap = { version = "4.5.17", features = ["cargo"] }
+opencv = "0.92.3"
+
+[lints.rust]
+unsafe_code = "forbid"
