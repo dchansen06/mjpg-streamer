@@ -1,4 +1,4 @@
-[![Build and Test](https://github.com/dchansen06/mjpg-streamer/actions/workflows/build-test.yml/badge.svg)](https://github.com/dchansen06/mjpg-streamer/actions/workflows/build-test.yml)
+[![Build](https://github.com/dchansen06/mjpg-streamer/actions/workflows/build.yml/badge.svg)](https://github.com/dchansen06/mjpg-streamer/actions/workflows/build.yml)
 # mjpg-streamer
 A rust-based MJPG streamer with an eye towards compatibility with OctoPrint
 
