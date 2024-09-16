@@ -12,18 +12,13 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        toolchain:
-          - stable
-          - beta
-          - nightly
+
     steps:
     - uses: actions/checkout@v4
     - name: Setup environment
-      run: sudo apt-get install libopencv-dev libclang-dev -y
-    - name: Release channels
-      run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      run: sudo apt-get install libopencv-dev libclang-dev -y --no-install-suggests --no-install-recommends
+      run: rustup update stable
+      run: rustup default stable
     - name: Build crate
       run: cargo build --verbose
     - name: Run tests
