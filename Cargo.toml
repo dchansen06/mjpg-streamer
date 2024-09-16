@@ -8,7 +8,6 @@ readme = "README.md"
 repository = "https://github.com/dchansen06/mjpg-streamer/"
 license = "GPL-3.0-or-later"
 license-file = "LICENSE"
-links = "opencv-dev"
 publish = false
 categories = ["command-line-utilities", "encoding", "multimedia::video", "network-programming", "web-programming::http-server"]
 keywords = ["octoprint", "mjpg", "jpg", "stream", "camera"]
