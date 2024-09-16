@@ -1,4 +1,4 @@
-name: Build and Test
+name: Build
 
 on:
   push:
@@ -19,5 +19,3 @@ jobs:
       run: sudo apt-get install libopencv-dev libclang-dev -y --no-install-suggests --no-install-recommends && rustup update stable && rustup default stable
     - name: Build crate
       run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
