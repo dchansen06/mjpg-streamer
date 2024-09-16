@@ -28,26 +28,21 @@ fn main() {
 		.about("Sets up a MJPG stream at /stream and /mjpg as well as a jpg at anything else")
 		.arg(Arg::new("port").short('p').long("port").help("Sets the port").action(ArgAction::Set).required(false).value_parser(value_parser!(u16)))
 		.arg(Arg::new("width").short('w').long("width").help("Sets the width").action(ArgAction::Set).required(false).value_parser(value_parser!(f64)))
-		.arg(
-			Arg::new("height")
-				.short('v')
-				.long("height")
-				.help("Sets the height")
-				.action(ArgAction::Set)
-				.required(false)
-				.value_parser(value_parser!(f64)),
-		)
+		.arg(Arg::new("height").short('v').long("height").help("Sets the height").action(ArgAction::Set).required(false).value_parser(value_parser!(f64)))
+		.arg(Arg::new("video-id").short('i').long("id").help("Identifies the /dev/video#").action(ArgAction::Set).required(false).value_parser(value_parser!(i32)),)
 		.get_matches();
 
 	let port: u16 = *matches.get_one::<u16>("port").unwrap_or(&8080);
 	let width: f64 = *matches.get_one::<f64>("width").unwrap_or(&320.0);
 	let height: f64 = *matches.get_one::<f64>("height").unwrap_or(&240.0);
+	let video: i32 = *matches.get_one::<i32>("video-id").unwrap_or(&0);
 
 	println!("Reading port: {}", port);
 	println!("Attempting: {}x{}", width, height);
+	println!("Trying device: {}", video);
 
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).expect(&format!("Failed to get 0.0.0.0:{}", port));
-	let camera = Arc::new(Mutex::new(videoio::VideoCapture::new(0, videoio::CAP_ANY).expect("Failed to get video capture")));
+	let camera = Arc::new(Mutex::new(videoio::VideoCapture::new(video, videoio::CAP_ANY).expect("Failed to get video capture")));
 
 	camera.lock().unwrap().set(videoio::CAP_PROP_FRAME_WIDTH, width).expect("Failed to set width");
 	camera.lock().unwrap().set(videoio::CAP_PROP_FRAME_HEIGHT, height).expect("Failed to set height");
