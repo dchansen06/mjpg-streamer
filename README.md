@@ -1,3 +1,4 @@
+[![Rust](https://github.com/dchansen06/mjpg-streamer/actions/workflows/rust.yml/badge.svg)](https://github.com/dchansen06/mjpg-streamer/actions/workflows/rust.yml)
 # mjpg-streamer
 A rust-based MJPG streamer with an eye towards compatibility with OctoPrint
 
