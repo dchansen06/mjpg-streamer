@@ -14,9 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-      - stable
-      - beta
-      - nightly
+        toolchain:
+          - stable
+          - beta
+          - nightly
     steps:
     - uses: actions/checkout@v4
     - name: Release channels
