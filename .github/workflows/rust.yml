@@ -16,7 +16,7 @@ jobs:
     	matrix:
      	- stable
       	- beta
-	- nightly
+       - nightly
     steps:
     - uses: actions/checkout@v4
     - name: Release channels
