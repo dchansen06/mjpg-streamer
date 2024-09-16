@@ -16,9 +16,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Setup environment
-      run: sudo apt-get install libopencv-dev libclang-dev -y --no-install-suggests --no-install-recommends
-      run: rustup update stable
-      run: rustup default stable
+      run: sudo apt-get install libopencv-dev libclang-dev -y --no-install-suggests --no-install-recommends && rustup update stable && rustup default stable
     - name: Build crate
       run: cargo build --verbose
     - name: Run tests
