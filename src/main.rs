@@ -27,10 +27,16 @@ struct Configures {
 	apikey: Arc<Mutex<String>>,
 }
 
-fn collect_buffer(camera: &mut videoio::VideoCapture, frame: &mut Mat, buffer: &mut Vector<u8>) {
-	camera.read(frame).expect("Failed to capture frame");
-	buffer.clear();
-	imgcodecs::imencode(".jpg", frame, buffer, &Vector::new()).expect("Failed to fill buffer");
+struct Videos {
+	camera: videoio::VideoCapture,
+	frame: Mat,
+	buffer: Vector<u8>,
+}
+
+fn fillbuffer(video: &mut Videos) {
+	video.camera.read(&mut video.frame).expect("Failed to capture frame");
+	video.buffer.clear();
+	imgcodecs::imencode(".jpg", &mut video.frame, &mut video.buffer, &Vector::new()).expect("Failed to fill buffer");
 }
 
 fn configuration() -> Configures {
@@ -54,26 +60,31 @@ fn configuration() -> Configures {
 	}
 }
 
+fn setupvideo(cliconf: &Configures) -> Videos {
+	let mut video = Videos {
+		camera: videoio::VideoCapture::new(cliconf.video, videoio::CAP_ANY).expect("Failed to get video capture"),
+		frame: Mat::default(),
+		buffer: Vector::new(),
+	};
+
+	video.camera.set(videoio::CAP_PROP_FRAME_WIDTH, cliconf.width).expect("Failed to set width");
+	video.camera.set(videoio::CAP_PROP_FRAME_HEIGHT, cliconf.height).expect("Failed to set height");
+
+	return video;
+}
+
 fn main() {
 	let cliconf: Configures = configuration();
+	let video = Arc::new(Mutex::new(setupvideo(&cliconf)));
 
 	println!("Reading port: {}", cliconf.port);
 	println!("Attempting: {}x{}", cliconf.width, cliconf.height);
 	println!("Trying device: {}", cliconf.video);
 
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", cliconf.port)).expect(&format!("Failed to get 0.0.0.0:{}", cliconf.port));
-	let camera = Arc::new(Mutex::new(videoio::VideoCapture::new(cliconf.video, videoio::CAP_ANY).expect("Failed to get video capture")));
-
-	camera.lock().unwrap().set(videoio::CAP_PROP_FRAME_WIDTH, cliconf.width).expect("Failed to set width");
-	camera.lock().unwrap().set(videoio::CAP_PROP_FRAME_HEIGHT, cliconf.height).expect("Failed to set height");
-
-	let frame = Arc::new(Mutex::new(Mat::default()));
-	let buffer = Arc::new(Mutex::new(Vector::new()));
 
 	for stream in listener.incoming() {
-		let camera = Arc::clone(&camera);
-		let frame = Arc::clone(&frame);
-		let buffer = Arc::clone(&buffer);
+		let video = Arc::clone(&video);
 		let apikey = Arc::clone(&cliconf.apikey);
 
 		thread::spawn(move || {
@@ -97,11 +108,11 @@ fn main() {
 					stream.write_all(response.as_bytes()).expect("Failed to write response to stream");
 
 					loop {
-						collect_buffer(&mut camera.lock().unwrap(), &mut frame.lock().unwrap(), &mut buffer.lock().unwrap());
+						fillbuffer(&mut video.lock().unwrap());
 
 						let mut closing_operations = || -> Result<(), std::io::Error> {
-							stream.write_all(format!("--frame\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\n\r\n", buffer.lock().unwrap().len()).as_bytes())?;
-							stream.write_all(buffer.lock().unwrap().as_slice())?;
+							stream.write_all(format!("--frame\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\n\r\n", video.lock().unwrap().buffer.len()).as_bytes())?;
+							stream.write_all(video.lock().unwrap().buffer.as_slice())?;
 							stream.write_all(b"\r\n")?;
 							stream.flush()?;
 							Ok(())
@@ -114,11 +125,11 @@ fn main() {
 						thread::sleep(cliconf.minspf);
 					}
 				} else {
-					collect_buffer(&mut camera.lock().unwrap(), &mut frame.lock().unwrap(), &mut buffer.lock().unwrap());
+					fillbuffer(&mut video.lock().unwrap());
 
 					let mut closing_operations = || -> Result<(), std::io::Error> {
-						stream.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length {}\r\n\r\n", buffer.lock().unwrap().len()).as_bytes())?;
-						stream.write_all(buffer.lock().unwrap().as_slice())?;
+						stream.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length {}\r\n\r\n", video.lock().unwrap().buffer.len()).as_bytes())?;
+						stream.write_all(video.lock().unwrap().buffer.as_slice())?;
 						stream.write_all(b"\r\n")?;
 						stream.flush()?;
 						Ok(())
