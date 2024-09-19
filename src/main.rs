@@ -24,7 +24,7 @@ fn collect_buffer(camera: &mut videoio::VideoCapture, frame: &mut Mat, buffer: &
 }
 
 fn main() {
-	let matches = command!("OctoPrint-Camera")
+	let matches = command!("mjpg-streamer") // Probably need a new name...
 		.about("Sets up a MJPG stream at /stream and /mjpg as well as a jpg at anything else")
 		.arg(Arg::new("server-port").short('p').long("port").help("Sets the port").action(ArgAction::Set).required(false).value_parser(value_parser!(u16)))
 		.arg(Arg::new("frame-width").short('w').long("width").help("Sets the width").action(ArgAction::Set).required(false).value_parser(value_parser!(f64)))
@@ -51,6 +51,8 @@ fn main() {
 
 	let frame = Arc::new(Mutex::new(Mat::default()));
 	let buffer = Arc::new(Mutex::new(Vector::new()));
+
+	println!("See\n\t0.0.0.0:{}/snapshot.jpg?key={}\n\t0.0.0.0:{}/stream.mjpg?key={}\n", port, apikey, port, apikey);
 
 	for stream in listener.incoming() {
 		let camera = Arc::clone(&camera);

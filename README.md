@@ -15,4 +15,4 @@ This is not yet stable or finalized software
 Please report any bugs or security issues
 
 ## Security
-Use at your own risk, if someone can ping your IP they can watch the stream
+Use at your own risk, if someone can ping your IP they can watch the stream. The apikey feature is not a replacement, it only adds a layer of [obfustication](https://en.wikipedia.org/wiki/Security_through_obscurity#Criticism).
