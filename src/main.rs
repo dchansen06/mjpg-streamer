@@ -70,7 +70,7 @@ fn setupvideo(cliconf: &Configures) -> Videos {
 	video.camera.set(videoio::CAP_PROP_FRAME_WIDTH, cliconf.width).expect("Failed to set width");
 	video.camera.set(videoio::CAP_PROP_FRAME_HEIGHT, cliconf.height).expect("Failed to set height");
 
-	return video;
+	video
 }
 
 fn main() {
