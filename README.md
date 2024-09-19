@@ -18,7 +18,7 @@ Please report any bugs or security issues
 Use at your own risk, if someone can ping your IP they can watch the stream. The apikey feature is not a replacement, it only adds a layer of [obfustication](https://en.wikipedia.org/wiki/Security_through_obscurity#Criticism).
 
 # To-Do
-* Setup a testing suite
 * Divide into more discrete functions
+* Setup a testing suite
 * Run a best-guess attempt at getting inside through the client-side
 * Ask for external comment
