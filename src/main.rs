@@ -42,6 +42,7 @@ fn main() {
 	println!("Reading port: {}", port);
 	println!("Attempting: {}x{}", width, height);
 	println!("Trying device: {}", video);
+	println!("See\n\t0.0.0.0:{}/snapshot.jpg?key={}\n\t0.0.0.0:{}/stream.mjpg?key={}\n", port, apikey, port, apikey);
 
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).expect(&format!("Failed to get 0.0.0.0:{}", port));
 	let camera = Arc::new(Mutex::new(videoio::VideoCapture::new(video, videoio::CAP_ANY).expect("Failed to get video capture")));
@@ -51,8 +52,6 @@ fn main() {
 
 	let frame = Arc::new(Mutex::new(Mat::default()));
 	let buffer = Arc::new(Mutex::new(Vector::new()));
-
-	println!("See\n\t0.0.0.0:{}/snapshot.jpg?key={}\n\t0.0.0.0:{}/stream.mjpg?key={}\n", port, apikey, port, apikey);
 
 	for stream in listener.incoming() {
 		let camera = Arc::clone(&camera);
