@@ -16,6 +16,7 @@ use std::net::TcpListener;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
+use std::time::Duration;
 
 fn collect_buffer(camera: &mut videoio::VideoCapture, frame: &mut Mat, buffer: &mut Vector<u8>) {
 	camera.read(frame).expect("Failed to capture frame");
@@ -27,6 +28,7 @@ fn main() {
 	let matches = command!("mjpg-streamer") // Probably need a new name...
 		.about("Sets up a MJPG stream at /stream and /mjpg as well as a jpg at anything else")
 		.arg(Arg::new("server-port").short('p').long("port").help("Sets the port").action(ArgAction::Set).required(false).value_parser(value_parser!(u16)))
+		.arg(Arg::new("max-fps").short('f').long("fps").help("Sets the maximum fps for a single thread").action(ArgAction::Set).required(false).value_parser(value_parser!(f64)))
 		.arg(Arg::new("frame-width").short('w').long("width").help("Sets the width").action(ArgAction::Set).required(false).value_parser(value_parser!(f64)))
 		.arg(Arg::new("frame-height").short('v').long("height").help("Sets the height").action(ArgAction::Set).required(false).value_parser(value_parser!(f64)))
 		.arg(Arg::new("video-id").short('i').long("id").help("Identifies the /dev/video#").action(ArgAction::Set).required(false).value_parser(value_parser!(i32)))
@@ -34,6 +36,7 @@ fn main() {
 		.get_matches();
 
 	let port: u16 = *matches.get_one::<u16>("server-port").unwrap_or(&8080);
+	let minspf: Duration = Duration::from_secs_f64(matches.get_one::<f64>("max-fps").unwrap_or(&10.0).powi(-1));
 	let width: f64 = *matches.get_one::<f64>("frame-width").unwrap_or(&320.0);
 	let height: f64 = *matches.get_one::<f64>("frame-height").unwrap_or(&240.0);
 	let video: i32 = *matches.get_one::<i32>("video-id").unwrap_or(&0);
@@ -42,7 +45,6 @@ fn main() {
 	println!("Reading port: {}", port);
 	println!("Attempting: {}x{}", width, height);
 	println!("Trying device: {}", video);
-	println!("See\n\t0.0.0.0:{}/snapshot.jpg?key={}\n\t0.0.0.0:{}/stream.mjpg?key={}\n", port, apikey.lock().unwrap(), port, apikey.lock().unwrap());
 
 	let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).expect(&format!("Failed to get 0.0.0.0:{}", port));
 	let camera = Arc::new(Mutex::new(videoio::VideoCapture::new(video, videoio::CAP_ANY).expect("Failed to get video capture")));
@@ -93,6 +95,8 @@ fn main() {
 						if let Err(_) = closing_operations() {
 							break;
 						}
+
+						thread::sleep(minspf);
 					}
 				} else {
 					collect_buffer(&mut camera.lock().unwrap(), &mut frame.lock().unwrap(), &mut buffer.lock().unwrap());
