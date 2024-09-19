@@ -104,8 +104,7 @@ fn main() {
 				let _ = closing_operations();
 			} else {
 				if header_get.contains("stream") || header_get.contains("mjpg") {
-					let response = format!("HTTP/1.1 200 OK\r\nContent-Type: multipart/x-mixed-replace; boundary=frame\r\n\r\n");
-					stream.write_all(response.as_bytes()).expect("Failed to write response to stream");
+					stream.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: multipart/x-mixed-replace; boundary=frame\r\n\r\n").as_bytes()).expect("Failed to write response to stream");
 
 					loop {
 						fillbuffer(&mut video.lock().unwrap());
