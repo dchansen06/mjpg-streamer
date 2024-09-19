@@ -26,16 +26,18 @@ fn collect_buffer(camera: &mut videoio::VideoCapture, frame: &mut Mat, buffer: &
 fn main() {
 	let matches = command!("OctoPrint-Camera")
 		.about("Sets up a MJPG stream at /stream and /mjpg as well as a jpg at anything else")
-		.arg(Arg::new("port").short('p').long("port").help("Sets the port").action(ArgAction::Set).required(false).value_parser(value_parser!(u16)))
-		.arg(Arg::new("width").short('w').long("width").help("Sets the width").action(ArgAction::Set).required(false).value_parser(value_parser!(f64)))
-		.arg(Arg::new("height").short('v').long("height").help("Sets the height").action(ArgAction::Set).required(false).value_parser(value_parser!(f64)))
+		.arg(Arg::new("server-port").short('p').long("port").help("Sets the port").action(ArgAction::Set).required(false).value_parser(value_parser!(u16)))
+		.arg(Arg::new("frame-width").short('w').long("width").help("Sets the width").action(ArgAction::Set).required(false).value_parser(value_parser!(f64)))
+		.arg(Arg::new("frame-height").short('v').long("height").help("Sets the height").action(ArgAction::Set).required(false).value_parser(value_parser!(f64)))
 		.arg(Arg::new("video-id").short('i').long("id").help("Identifies the /dev/video#").action(ArgAction::Set).required(false).value_parser(value_parser!(i32)))
+		.arg(Arg::new("api-key").short('k').long("key").help("Requires a token--does NOT make it secure").action(ArgAction::Set).required(false).value_parser(value_parser!(String)))
 		.get_matches();
 
-	let port: u16 = *matches.get_one::<u16>("port").unwrap_or(&8080);
-	let width: f64 = *matches.get_one::<f64>("width").unwrap_or(&320.0);
-	let height: f64 = *matches.get_one::<f64>("height").unwrap_or(&240.0);
+	let port: u16 = *matches.get_one::<u16>("server-port").unwrap_or(&8080);
+	let width: f64 = *matches.get_one::<f64>("frame-width").unwrap_or(&320.0);
+	let height: f64 = *matches.get_one::<f64>("frame-height").unwrap_or(&240.0);
 	let video: i32 = *matches.get_one::<i32>("video-id").unwrap_or(&0);
+	let apikey = Arc::new(Mutex::new(matches.get_one::<String>("api-key").unwrap_or(&"".to_string()).clone()));
 
 	println!("Reading port: {}", port);
 	println!("Attempting: {}x{}", width, height);
@@ -54,6 +56,7 @@ fn main() {
 		let camera = Arc::clone(&camera);
 		let frame = Arc::clone(&frame);
 		let buffer = Arc::clone(&buffer);
+		let apikey = Arc::clone(&apikey);
 
 		thread::spawn(move || {
 			let mut stream = stream.expect("Failed to accept connection");
@@ -62,37 +65,47 @@ fn main() {
 			let mut header_get = String::new();
 			BufReader::new(stream.try_clone().unwrap()).read_line(&mut header_get).expect("Failed to parse header");
 
-			if header_get.contains("stream") || header_get.contains("mjpg") {
-				let response = format!("HTTP/1.1 200 OK\r\nContent-Type: multipart/x-mixed-replace; boundary=frame\r\n\r\n");
-				stream.write_all(response.as_bytes()).expect("Failed to write response to stream");
+			if !header_get.contains(&*apikey.lock().unwrap()) {
+				let mut closing_operations = || -> Result<(), std::io::Error> {
+					stream.write_all(format!("HTTP/1.1 401 Unauthorized\r\nContent-Type: text/html;\r\n\r\n<h1>401 Unathorized:</h1><p>Through a series of highly sophisticated and complex algorithms, this system has determined that you are not presently authorized to use this system function. It could be that you simply mistyped a password, or, it could be that you are some sort of interplanetary alien-being that has no hands and, thus, cannot type. If I were a gambler, I would bet that a cat (an orange tabby named Sierra or Harley) somehow jumped onto your keyboard and forgot some of the more important pointers from those typing lessons you paid for. Based on the actual error encountered, I would guess that the feline in question simply forgot to place one or both paws on the appropriate home keys before starting. Then again, I suppose it could have been a keyboard error caused by some form of cosmic radiation; this would fit nicely with my interplanetary alien-being theory. If you think this might be the cause, perhaps you could create some sort of underground bunker to help shield yourself from it. I don't know that it will work, but, you will probably feel better if you try something.</p><p><small>(Copied from 'the internet')</small></p>\r\n").as_bytes())?;
+					stream.flush()?;
+					Ok(())
+				};
 
-				loop {
+				let _ = closing_operations();
+			} else {
+				if header_get.contains("stream") || header_get.contains("mjpg") {
+					let response = format!("HTTP/1.1 200 OK\r\nContent-Type: multipart/x-mixed-replace; boundary=frame\r\n\r\n");
+					stream.write_all(response.as_bytes()).expect("Failed to write response to stream");
+
+					loop {
+						collect_buffer(&mut camera.lock().unwrap(), &mut frame.lock().unwrap(), &mut buffer.lock().unwrap());
+
+						let mut closing_operations = || -> Result<(), std::io::Error> {
+							stream.write_all(format!("--frame\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\n\r\n", buffer.lock().unwrap().len()).as_bytes())?;
+							stream.write_all(buffer.lock().unwrap().as_slice())?;
+							stream.write_all(b"\r\n")?;
+							stream.flush()?;
+							Ok(())
+						};
+
+						if let Err(_) = closing_operations() {
+							break;
+						}
+					}
+				} else {
 					collect_buffer(&mut camera.lock().unwrap(), &mut frame.lock().unwrap(), &mut buffer.lock().unwrap());
 
 					let mut closing_operations = || -> Result<(), std::io::Error> {
-						stream.write_all(format!("--frame\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\n\r\n", buffer.lock().unwrap().len()).as_bytes())?;
+						stream.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length {}\r\n\r\n", buffer.lock().unwrap().len()).as_bytes())?;
 						stream.write_all(buffer.lock().unwrap().as_slice())?;
 						stream.write_all(b"\r\n")?;
 						stream.flush()?;
 						Ok(())
 					};
 
-					if let Err(_) = closing_operations() {
-						break;
-					}
+					let _ = closing_operations();
 				}
-			} else {
-				collect_buffer(&mut camera.lock().unwrap(), &mut frame.lock().unwrap(), &mut buffer.lock().unwrap());
-
-				let mut closing_operations = || -> Result<(), std::io::Error> {
-					stream.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length {}\r\n\r\n", buffer.lock().unwrap().len()).as_bytes())?;
-					stream.write_all(buffer.lock().unwrap().as_slice())?;
-					stream.write_all(b"\r\n")?;
-					stream.flush()?;
-					Ok(())
-				};
-
-				let _ = closing_operations();
 			}
 
 			println!("Closing {}", client);
