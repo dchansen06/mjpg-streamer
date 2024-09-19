@@ -18,13 +18,22 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
+struct Configures {
+	port: u16,
+	minspf: Duration,
+	width: f64,
+	height: f64,
+	video: i32,
+	apikey: Arc<Mutex<String>>,
+}
+
 fn collect_buffer(camera: &mut videoio::VideoCapture, frame: &mut Mat, buffer: &mut Vector<u8>) {
 	camera.read(frame).expect("Failed to capture frame");
 	buffer.clear();
 	imgcodecs::imencode(".jpg", frame, buffer, &Vector::new()).expect("Failed to fill buffer");
 }
 
-fn main() {
+fn configuration() -> Configures {
 	let matches = command!("mjpg-streamer") // Probably need a new name...
 		.about("Sets up a MJPG stream at /stream and /mjpg as well as a jpg at anything else")
 		.arg(Arg::new("server-port").short('p').long("port").help("Sets the port").action(ArgAction::Set).required(false).value_parser(value_parser!(u16)))
@@ -35,22 +44,28 @@ fn main() {
 		.arg(Arg::new("api-key").short('k').long("key").help("Requires a token--does NOT make it secure").action(ArgAction::Set).required(false).value_parser(value_parser!(String)))
 		.get_matches();
 
-	let port: u16 = *matches.get_one::<u16>("server-port").unwrap_or(&8080);
-	let minspf: Duration = Duration::from_secs_f64(matches.get_one::<f64>("max-fps").unwrap_or(&10.0).powi(-1));
-	let width: f64 = *matches.get_one::<f64>("frame-width").unwrap_or(&320.0);
-	let height: f64 = *matches.get_one::<f64>("frame-height").unwrap_or(&240.0);
-	let video: i32 = *matches.get_one::<i32>("video-id").unwrap_or(&0);
-	let apikey = Arc::new(Mutex::new(matches.get_one::<String>("api-key").unwrap_or(&"".to_string()).clone()));
+	Configures {
+		port: *matches.get_one::<u16>("server-port").unwrap_or(&8080),
+		minspf: Duration::from_secs_f64(matches.get_one::<f64>("max-fps").unwrap_or(&10.0).powi(-1)),
+		width: *matches.get_one::<f64>("frame-width").unwrap_or(&320.0),
+		height: *matches.get_one::<f64>("frame-height").unwrap_or(&240.0),
+		video: *matches.get_one::<i32>("video-id").unwrap_or(&0),
+		apikey: Arc::new(Mutex::new(matches.get_one::<String>("api-key").unwrap_or(&"".to_string()).clone())),
+	}
+}
 
-	println!("Reading port: {}", port);
-	println!("Attempting: {}x{}", width, height);
-	println!("Trying device: {}", video);
+fn main() {
+	let cliconf: Configures = configuration();
 
-	let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).expect(&format!("Failed to get 0.0.0.0:{}", port));
-	let camera = Arc::new(Mutex::new(videoio::VideoCapture::new(video, videoio::CAP_ANY).expect("Failed to get video capture")));
+	println!("Reading port: {}", cliconf.port);
+	println!("Attempting: {}x{}", cliconf.width, cliconf.height);
+	println!("Trying device: {}", cliconf.video);
 
-	camera.lock().unwrap().set(videoio::CAP_PROP_FRAME_WIDTH, width).expect("Failed to set width");
-	camera.lock().unwrap().set(videoio::CAP_PROP_FRAME_HEIGHT, height).expect("Failed to set height");
+	let listener = TcpListener::bind(format!("0.0.0.0:{}", cliconf.port)).expect(&format!("Failed to get 0.0.0.0:{}", cliconf.port));
+	let camera = Arc::new(Mutex::new(videoio::VideoCapture::new(cliconf.video, videoio::CAP_ANY).expect("Failed to get video capture")));
+
+	camera.lock().unwrap().set(videoio::CAP_PROP_FRAME_WIDTH, cliconf.width).expect("Failed to set width");
+	camera.lock().unwrap().set(videoio::CAP_PROP_FRAME_HEIGHT, cliconf.height).expect("Failed to set height");
 
 	let frame = Arc::new(Mutex::new(Mat::default()));
 	let buffer = Arc::new(Mutex::new(Vector::new()));
@@ -59,7 +74,7 @@ fn main() {
 		let camera = Arc::clone(&camera);
 		let frame = Arc::clone(&frame);
 		let buffer = Arc::clone(&buffer);
-		let apikey = Arc::clone(&apikey);
+		let apikey = Arc::clone(&cliconf.apikey);
 
 		thread::spawn(move || {
 			let mut stream = stream.expect("Failed to accept connection");
@@ -96,7 +111,7 @@ fn main() {
 							break;
 						}
 
-						thread::sleep(minspf);
+						thread::sleep(cliconf.minspf);
 					}
 				} else {
 					collect_buffer(&mut camera.lock().unwrap(), &mut frame.lock().unwrap(), &mut buffer.lock().unwrap());
