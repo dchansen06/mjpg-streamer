@@ -15,9 +15,17 @@ This is not yet stable or finalized software.
 Please report any bugs or security issues.
 
 # Installation
-Install the required dependencies with ```sudo apt-get install libopencv-dev libclang-dev --no-install-suggests --no-install-recommends``` and then install [cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html).
+Install the required dependencies with
 
-Install the program with ```cargo install --git https://github.com/dchansen06/mjpg-streamer/``` and then run the binary (generally in `~/.cargo/bin`) with any desired flags.
+```$ sudo apt-get install libopencv-dev libclang-dev --no-install-suggests --no-install-recommends```
+
+and then install [cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html).
+
+Install the program with
+
+```$ cargo install --git https://github.com/dchansen06/mjpg-streamer/```
+
+and then run the binary (generally in `~/.cargo/bin`) with any desired flags.
 
 Once completed the installation process should become a lot simpler, but this program is still well in the pre-alpha release phase, so USE WITH CAUTION AT YOUR OWN RISK.
 
