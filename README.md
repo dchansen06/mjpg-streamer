@@ -21,6 +21,7 @@ Install the required dependencies with
 
 and then install [cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html).
 
+
 Install the program with
 
 ```$ cargo install --git https://github.com/dchansen06/mjpg-streamer/```
