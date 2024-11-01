@@ -41,7 +41,7 @@ fn fillbuffer(video: &mut Videos) {
 
 fn configuration() -> Configures {
 	let matches = command!("mjpg-streamer") // Probably need a new name...
-		.about("Sets up a MJPG stream at /stream and /mjpg as well as a jpg at anything else")
+		.about("Sets up a MJPG stream at /stream and /mjpg, and a jpg at anything else")
 		.arg(Arg::new("server-port").short('p').long("port").help("Sets the port").action(ArgAction::Set).required(false).value_parser(value_parser!(u16)))
 		.arg(Arg::new("max-fps").short('f').long("fps").help("Sets the maximum fps for a single thread").action(ArgAction::Set).required(false).value_parser(value_parser!(f64)))
 		.arg(Arg::new("frame-width").short('w').long("width").help("Sets the width").action(ArgAction::Set).required(false).value_parser(value_parser!(f64)))
