@@ -13,7 +13,7 @@ keywords = ["octoprint", "mjpg", "jpg", "stream", "camera"]
 
 [dependencies]
 clap = { version = "4.5.17", features = ["cargo"] }
-opencv = "0.94.4"
+opencv = "0.95.0"
 
 [lints.rust]
 unsafe_code = "forbid"
